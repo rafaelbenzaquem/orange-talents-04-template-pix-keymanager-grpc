@@ -1,0 +1,6 @@
+applicationType: default
+defaultPackage: br.com.zup.academy.benzaquem
+testFramework: junit
+sourceLanguage: kotlin
+buildTool: gradle
+features: [annotation-api, app-name, data, data-jpa, gradle, h2, http-client, jdbc-hikari, junit, kotlin, kotlin-application, logback, mockito, netty-server, readme, shade, yaml]
