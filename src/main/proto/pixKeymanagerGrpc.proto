@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "br.com.zup.academy.benzaquem.pix.grpc";
+option java_outer_classname = "PixKeymanagerGrpc";
+
+package br.com.zup.academy.benzaquem;
+
+service PixKeymanagerGrpcService {
+  rpc registrarChave (RegistroRequest) returns (RegistroResponse) {}
+}
+
+enum TipoChave{
+  CPF = 0;
+  CELULAR = 1;
+  EMAIL = 2;
+  RANDOM = 3;
+}
+
+enum TipoConta{
+  CONTA_CORRENTE = 0;
+  CONTA_POUPANCA = 1;
+}
+
+message RegistroRequest {
+  string idCliente = 1;
+  string chave = 2;
+  TipoChave tipoChave = 3;
+  TipoConta tipoConta = 4;
+}
+
+message RegistroResponse {
+  string pixId = 1;
+}
