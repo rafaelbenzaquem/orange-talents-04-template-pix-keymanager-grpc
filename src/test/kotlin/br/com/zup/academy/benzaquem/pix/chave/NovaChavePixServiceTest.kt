@@ -4,22 +4,22 @@ import br.com.zup.academy.benzaquem.pix.common.TipoConta
 import br.com.zup.academy.benzaquem.pix.external.ConsultaResponse
 import br.com.zup.academy.benzaquem.pix.external.ContaClient
 import br.com.zup.academy.benzaquem.pix.external.TitularResponse
-import br.com.zup.academy.benzaquem.pix.grpc.PixKeymanagerGrpcServiceGrpc.*
-import br.com.zup.academy.benzaquem.pix.grpc.RegistroRequest
-import br.com.zup.academy.benzaquem.pix.grpc.TipoChave as TipoChaveGrpc
-import br.com.zup.academy.benzaquem.pix.grpc.TipoConta as TipoContaGrpc
+import br.com.zup.academy.benzaquem.pix.grpc.NovaChavePixRequest
+import br.com.zup.academy.benzaquem.pix.grpc.SalvaNovaChavePixGrpcServiceGrpc.SalvaNovaChavePixGrpcServiceBlockingStub
+import br.com.zup.academy.benzaquem.pix.grpc.SalvaNovaChavePixGrpcServiceGrpc.newBlockingStub
 import io.grpc.ManagedChannel
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
-import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Replaces
 import io.micronaut.grpc.annotation.GrpcChannel
 import io.micronaut.grpc.server.GrpcServerChannel
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.client.exceptions.HttpClientException
 import io.micronaut.test.annotation.MockBean
+import io.micronaut.test.annotation.TransactionMode
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
-import  org.junit.jupiter.api.Assertions.*
-import  org.junit.jupiter.api.assertThrows as aThrows
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -27,16 +27,20 @@ import org.junit.jupiter.api.TestMethodOrder
 import org.mockito.Mockito
 import javax.inject.Inject
 import javax.inject.Singleton
+import br.com.zup.academy.benzaquem.pix.grpc.TipoChave as TipoChaveGrpc
+import br.com.zup.academy.benzaquem.pix.grpc.TipoConta as TipoContaGrpc
+import org.junit.jupiter.api.assertThrows as aThrows
 
 
-@MicronautTest(rollback = true)
+@MicronautTest(rollback = true, transactionMode = TransactionMode.SEPARATE_TRANSACTIONS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class ChaveRegistroControllerTest(
-    private val grpcPixClient: PixKeymanagerGrpcServiceBlockingStub
-) {
+class NovaChavePixServiceTest {
 
     @field:Inject
     lateinit var contaClient: ContaClient
+
+    @field:Inject
+    lateinit var grpcPixClient: SalvaNovaChavePixGrpcServiceBlockingStub
 
     @Test
     @Order(1)
@@ -62,8 +66,8 @@ class ChaveRegistroControllerTest(
                 )
             )
 
-        val response = grpcPixClient.registrarChave(
-            RegistroRequest.newBuilder()
+        val response = grpcPixClient.salvarNovaChavePix(
+            NovaChavePixRequest.newBuilder()
                 .setIdCliente(idClienteItau)
                 .setChave(cpfCliente)
                 .setTipoChave(TipoChaveGrpc.CPF)
@@ -84,8 +88,8 @@ class ChaveRegistroControllerTest(
 
 
         val error = aThrows<StatusRuntimeException> {
-            grpcPixClient.registrarChave(
-                RegistroRequest.newBuilder()
+            grpcPixClient.salvarNovaChavePix(
+                NovaChavePixRequest.newBuilder()
                     .setIdCliente(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(TipoChaveGrpc.CPF)
@@ -112,8 +116,8 @@ class ChaveRegistroControllerTest(
             .thenReturn(HttpResponse.notFound())
 
         val error = aThrows<StatusRuntimeException> {
-            grpcPixClient.registrarChave(
-                RegistroRequest.newBuilder()
+            grpcPixClient.salvarNovaChavePix(
+                NovaChavePixRequest.newBuilder()
                     .setIdCliente(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
@@ -140,8 +144,8 @@ class ChaveRegistroControllerTest(
             .thenThrow(HttpClientException::class.java)
 
         val error = aThrows<StatusRuntimeException> {
-            grpcPixClient.registrarChave(
-                RegistroRequest.newBuilder()
+            grpcPixClient.salvarNovaChavePix(
+                NovaChavePixRequest.newBuilder()
                     .setIdCliente(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
@@ -166,8 +170,8 @@ class ChaveRegistroControllerTest(
 
 
         val error = aThrows<StatusRuntimeException> {
-            grpcPixClient.registrarChave(
-                RegistroRequest.newBuilder()
+            grpcPixClient.salvarNovaChavePix(
+                NovaChavePixRequest.newBuilder()
                     .setIdCliente(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
@@ -192,8 +196,8 @@ class ChaveRegistroControllerTest(
 
 
         val error = aThrows<StatusRuntimeException> {
-            grpcPixClient.registrarChave(
-                RegistroRequest.newBuilder()
+            grpcPixClient.salvarNovaChavePix(
+                NovaChavePixRequest.newBuilder()
                     .setIdCliente(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
@@ -218,8 +222,8 @@ class ChaveRegistroControllerTest(
 
 
         val error = aThrows<StatusRuntimeException> {
-            grpcPixClient.registrarChave(
-                RegistroRequest.newBuilder()
+            grpcPixClient.salvarNovaChavePix(
+                NovaChavePixRequest.newBuilder()
                     .setIdCliente(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
@@ -243,8 +247,8 @@ class ChaveRegistroControllerTest(
         val tipoChave = TipoChaveGrpc.RANDOM
 
         val error = aThrows<StatusRuntimeException> {
-            grpcPixClient.registrarChave(
-                RegistroRequest.newBuilder()
+            grpcPixClient.salvarNovaChavePix(
+                NovaChavePixRequest.newBuilder()
                     .setIdCliente(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
@@ -259,13 +263,14 @@ class ChaveRegistroControllerTest(
         }
     }
 
-    @Factory
-    class Clients {
-        @Singleton
-        fun blockingStub(@GrpcChannel(GrpcServerChannel.NAME) channel: ManagedChannel): PixKeymanagerGrpcServiceBlockingStub? {
-            return newBlockingStub(channel)
-        }
+    //    @Factory
+//    class ClientsA {
+    @Singleton
+    @Replaces
+    fun blockingStub(@GrpcChannel(GrpcServerChannel.NAME) channel: ManagedChannel): SalvaNovaChavePixGrpcServiceBlockingStub? {
+        return newBlockingStub(channel)
     }
+//    }
 
     @MockBean(ContaClient::class)
     fun consultaMock(): ContaClient {

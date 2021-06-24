@@ -9,7 +9,7 @@ import javax.validation.Valid
 
 @Validated
 @Singleton
-class NovaChaveValidadaService {
+class NovaChavePixValidador {
 
     fun novaChavePixValida(@Valid novaChavePix: ChavePix): ChavePix {
         if (novaChavePix.tipoChave == TipoChave.RANDOM)

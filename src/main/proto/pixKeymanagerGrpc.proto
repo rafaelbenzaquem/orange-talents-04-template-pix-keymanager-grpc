@@ -6,8 +6,12 @@ option java_outer_classname = "PixKeymanagerGrpc";
 
 package br.com.zup.academy.benzaquem;
 
-service PixKeymanagerGrpcService {
-  rpc registrarChave (RegistroRequest) returns (RegistroResponse) {}
+service SalvaNovaChavePixGrpcService{
+  rpc salvarNovaChavePix(NovaChavePixRequest) returns (ChavePixSalvaResponse) {}
+}
+
+service DeletaChavePixGrpcService{
+  rpc deletarChavePix(ChavePixDeletadaRequest) returns(ChavePixDeletadaResponse){}
 }
 
 enum TipoChave{
@@ -22,13 +26,22 @@ enum TipoConta{
   CONTA_POUPANCA = 1;
 }
 
-message RegistroRequest {
+message ChavePixDeletadaResponse{
+  string chave = 1;
+}
+
+message ChavePixDeletadaRequest{
+  string idCliente = 1;
+  string chave = 2;
+}
+
+message NovaChavePixRequest {
   string idCliente = 1;
   string chave = 2;
   TipoChave tipoChave = 3;
   TipoConta tipoConta = 4;
 }
 
-message RegistroResponse {
+message ChavePixSalvaResponse {
   string pixId = 1;
 }

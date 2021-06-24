@@ -2,9 +2,9 @@ package br.com.zup.academy.benzaquem.pix.chave
 
 import br.com.zup.academy.benzaquem.pix.external.ConsultaResponse
 import br.com.zup.academy.benzaquem.pix.external.ContaClient
-import br.com.zup.academy.benzaquem.pix.grpc.PixKeymanagerGrpcServiceGrpc
-import br.com.zup.academy.benzaquem.pix.grpc.RegistroRequest
-import br.com.zup.academy.benzaquem.pix.grpc.RegistroResponse
+import br.com.zup.academy.benzaquem.pix.grpc.ChavePixSalvaResponse
+import br.com.zup.academy.benzaquem.pix.grpc.NovaChavePixRequest
+import br.com.zup.academy.benzaquem.pix.grpc.SalvaNovaChavePixGrpcServiceGrpc
 import br.com.zup.academy.benzaquem.pix.grpc.toModel
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
@@ -16,18 +16,22 @@ import javax.inject.Singleton
 import javax.validation.ConstraintViolationException
 
 @Singleton
-class ChaveRegistroController(
-    private val novaChaveValidadaService: NovaChaveValidadaService,
+class NovaChavePixService(
+    private val novaChavePixValidador: NovaChavePixValidador,
     private val contaClient: ContaClient,
     private val chavePixRepository: ChavePixRepository
-) : PixKeymanagerGrpcServiceGrpc.PixKeymanagerGrpcServiceImplBase() {
+) : SalvaNovaChavePixGrpcServiceGrpc.SalvaNovaChavePixGrpcServiceImplBase() {
 
     private val logger = LoggerFactory.getLogger(this::class.java)
 
-    override fun registrarChave(request: RegistroRequest, responseObserver: StreamObserver<RegistroResponse>) {
+    override fun salvarNovaChavePix(
+        request: NovaChavePixRequest,
+        responseObserver: StreamObserver<ChavePixSalvaResponse>
+    ){
         logger.info("iniciando registro $request")
         try {
-            val novaChavePix = novaChaveValidadaService.novaChavePixValida(request.toModel())
+            val novaChavePix = novaChavePixValidador.novaChavePixValida(request.toModel())
+
 
             if (chavePixRepository.existsByChave(novaChavePix.chave)) {
                 responseObserver.onError(
@@ -43,7 +47,8 @@ class ChaveRegistroController(
                 logger.info("status client http {}", responseConsultaClient.status)
                 if (responseConsultaClient.status == HttpStatus.NOT_FOUND) {
                     responseObserver.onError(
-                        Status.NOT_FOUND.withDescription("'${novaChavePix.tipoConta} de cliente id=${novaChavePix.idCliente}' não foi encontrado").asRuntimeException()
+                        Status.NOT_FOUND.withDescription("'${novaChavePix.tipoConta} de cliente id=${novaChavePix.idCliente}' não foi encontrado")
+                            .asRuntimeException()
                     )
                     return
                 }
@@ -56,7 +61,7 @@ class ChaveRegistroController(
             chavePixRepository.save(novaChavePix)
 
 
-            val responseRegistrarChave = RegistroResponse.newBuilder().setPixId(novaChavePix.id).build()
+            val responseRegistrarChave = ChavePixSalvaResponse.newBuilder().setPixId(novaChavePix.id).build()
             responseObserver.onNext(responseRegistrarChave)
         } catch (ex: ConstraintViolationException) {
             responseObserver.onError(
