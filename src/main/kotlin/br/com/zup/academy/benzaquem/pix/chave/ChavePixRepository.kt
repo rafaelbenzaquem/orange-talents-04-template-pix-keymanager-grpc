@@ -10,7 +10,7 @@ interface ChavePixRepository : JpaRepository<ChavePix, String> {
 
     fun existsByChave(chave: String?): Boolean
 
-    @Query(value = "select c from ChavePix as c where c.idCliente =:idCliente and c.chave =:chave")
-    fun findByIdClienteAndChave(idCliente: String, chave: String): Optional<ChavePix>
+    @Query(value = "select c from ChavePix as c where c.id =:id and c.clienteId =:clienteId")
+    fun findByIdAndClienteId(id: String, clienteId: String): Optional<ChavePix>
 
 }

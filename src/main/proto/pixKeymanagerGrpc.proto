@@ -16,9 +16,10 @@ service DeletaChavePixGrpcService{
 
 enum TipoChave{
   CPF = 0;
-  CELULAR = 1;
-  EMAIL = 2;
-  RANDOM = 3;
+  CNPJ = 1;
+  PHONE = 2;
+  EMAIL = 3;
+  RANDOM = 4;
 }
 
 enum TipoConta{
@@ -31,12 +32,12 @@ message ChavePixDeletadaResponse{
 }
 
 message ChavePixDeletadaRequest{
-  string idCliente = 1;
-  string chave = 2;
+  string clienteId = 1;
+  string pixId = 2;
 }
 
 message NovaChavePixRequest {
-  string idCliente = 1;
+  string clienteId = 1;
   string chave = 2;
   TipoChave tipoChave = 3;
   TipoConta tipoConta = 4;

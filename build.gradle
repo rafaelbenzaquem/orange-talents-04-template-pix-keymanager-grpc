@@ -42,6 +42,7 @@ dependencies {
 
     runtimeOnly("mysql:mysql-connector-java")
 
+    implementation("io.micronaut.xml:micronaut-jackson-xml")
 
     implementation("org.jetbrains.kotlin:kotlin-reflect:${kotlinVersion}")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion}")

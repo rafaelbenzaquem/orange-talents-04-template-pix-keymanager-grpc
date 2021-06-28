@@ -1,9 +1,14 @@
 package br.com.zup.academy.benzaquem.pix.chave
 
+import br.com.zup.academy.benzaquem.pix.common.TipoChave
 import br.com.zup.academy.benzaquem.pix.common.TipoConta
-import br.com.zup.academy.benzaquem.pix.external.ConsultaResponse
-import br.com.zup.academy.benzaquem.pix.external.ContaClient
-import br.com.zup.academy.benzaquem.pix.external.TitularResponse
+import br.com.zup.academy.benzaquem.pix.external.bacen.BacenClient
+import br.com.zup.academy.benzaquem.pix.external.bacen.CreatePixKeyRequest
+import br.com.zup.academy.benzaquem.pix.external.bacen.CreatePixKeyResponse
+import br.com.zup.academy.benzaquem.pix.external.itau.ContaItauResponse
+import br.com.zup.academy.benzaquem.pix.external.itau.ContaItauClient
+import br.com.zup.academy.benzaquem.pix.external.itau.InstituicaoResponse
+import br.com.zup.academy.benzaquem.pix.external.itau.TitularResponse
 import br.com.zup.academy.benzaquem.pix.grpc.NovaChavePixRequest
 import br.com.zup.academy.benzaquem.pix.grpc.SalvaNovaChavePixGrpcServiceGrpc.SalvaNovaChavePixGrpcServiceBlockingStub
 import br.com.zup.academy.benzaquem.pix.grpc.SalvaNovaChavePixGrpcServiceGrpc.newBlockingStub
@@ -34,10 +39,13 @@ import org.junit.jupiter.api.assertThrows as aThrows
 
 @MicronautTest(rollback = true, transactionMode = TransactionMode.SEPARATE_TRANSACTIONS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class NovaChavePixServiceTest {
+class NovaChavePixControllerTest {
 
     @field:Inject
-    lateinit var contaClient: ContaClient
+    lateinit var itauClient: ContaItauClient
+
+    @field:Inject
+    lateinit var bacenClient: BacenClient
 
     @field:Inject
     lateinit var grpcPixClient: SalvaNovaChavePixGrpcServiceBlockingStub
@@ -46,34 +54,35 @@ class NovaChavePixServiceTest {
     @Order(1)
     fun `deve registrar chave pix com sucesso`() {
 
-        val idClienteItau = "c56dfef4-7901-44fb-84e2-a2cefb157890"
+        val clienteId = "c56dfef4-7901-44fb-84e2-a2cefb157890"
         val cpfCliente = "02467781054"
 
-        Mockito.`when`(contaClient.consultaContaItau(idClienteItau, TipoConta.CONTA_CORRENTE))
-            .thenReturn(
-                HttpResponse.accepted<ConsultaResponse?>().body(
-                    ConsultaResponse(
-                        TipoConta.CONTA_CORRENTE,
-                        null,
-                        null,
-                        null,
-                        TitularResponse(
-                            id = idClienteItau,
-                            null,
-                            cpf = cpfCliente
-                        )
-                    )
-                )
+        val contaItau = ContaItauResponse(
+            TipoConta.CONTA_CORRENTE,
+            InstituicaoResponse("Itau", "60701190"),
+            "0001",
+            "123456",
+            TitularResponse(
+                id = clienteId,
+                nome = "Rafael Ponte",
+                cpf = cpfCliente
             )
-
-        val response = grpcPixClient.salvarNovaChavePix(
-            NovaChavePixRequest.newBuilder()
-                .setIdCliente(idClienteItau)
-                .setChave(cpfCliente)
-                .setTipoChave(TipoChaveGrpc.CPF)
-                .setTipoConta(TipoContaGrpc.CONTA_CORRENTE)
-                .build()
         )
+
+        Mockito.`when`(itauClient.consultaContaItau(clienteId, TipoConta.CONTA_CORRENTE))
+            .thenReturn(HttpResponse.accepted<ContaItauResponse?>().body(contaItau))
+        Mockito.`when`(bacenClient.cadastrarChavePixBacen(CreatePixKeyRequest(contaItau, TipoChave.CPF, cpfCliente)))
+            .thenReturn(HttpResponse.accepted<CreatePixKeyResponse?>()
+                    .body(CreatePixKeyResponse(contaItau, TipoChave.CPF, cpfCliente)))
+
+                val response = grpcPixClient . salvarNovaChavePix (
+                NovaChavePixRequest.newBuilder()
+                    .setClienteId(clienteId)
+                    .setChave(cpfCliente)
+                    .setTipoChave(TipoChaveGrpc.CPF)
+                    .setTipoConta(TipoContaGrpc.CONTA_CORRENTE)
+                    .build()
+                )
 
         assertNotNull(response)
         assertNotNull(response.pixId)
@@ -90,7 +99,7 @@ class NovaChavePixServiceTest {
         val error = aThrows<StatusRuntimeException> {
             grpcPixClient.salvarNovaChavePix(
                 NovaChavePixRequest.newBuilder()
-                    .setIdCliente(idClienteItau)
+                    .setClienteId(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(TipoChaveGrpc.CPF)
                     .setTipoConta(TipoContaGrpc.CONTA_CORRENTE)
@@ -100,7 +109,7 @@ class NovaChavePixServiceTest {
 
         with(error) {
             assertEquals(Status.ALREADY_EXISTS.code, status.code)
-            assertEquals("Chave pix já cadastrada", status.description)
+            assertEquals("'CPF = $cpfCliente' já foi cadastrada", status.description)
         }
     }
 
@@ -112,13 +121,13 @@ class NovaChavePixServiceTest {
         val tipoChave = TipoChaveGrpc.CPF
         val tipoConta = TipoContaGrpc.CONTA_CORRENTE
 
-        Mockito.`when`(contaClient.consultaContaItau(idClienteItau, TipoConta.CONTA_CORRENTE))
+        Mockito.`when`(itauClient.consultaContaItau(idClienteItau, TipoConta.CONTA_CORRENTE))
             .thenReturn(HttpResponse.notFound())
 
         val error = aThrows<StatusRuntimeException> {
             grpcPixClient.salvarNovaChavePix(
                 NovaChavePixRequest.newBuilder()
-                    .setIdCliente(idClienteItau)
+                    .setClienteId(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
                     .setTipoConta(tipoConta)
@@ -127,7 +136,7 @@ class NovaChavePixServiceTest {
         }
 
         with(error) {
-            assertEquals(Status.NOT_FOUND.code, status.code)
+            assertEquals(Status.FAILED_PRECONDITION.code, status.code)
             assertEquals("'$tipoConta de cliente id=$idClienteItau' não foi encontrado", status.description)
         }
     }
@@ -140,13 +149,13 @@ class NovaChavePixServiceTest {
         val tipoChave = TipoChaveGrpc.EMAIL
         val tipoConta = TipoContaGrpc.CONTA_CORRENTE
 
-        Mockito.`when`(contaClient.consultaContaItau(idClienteItau, TipoConta.CONTA_CORRENTE))
-            .thenThrow(HttpClientException::class.java)
+        Mockito.`when`(itauClient.consultaContaItau(idClienteItau, TipoConta.CONTA_CORRENTE))
+            .thenThrow(HttpClientException("unavailable"))
 
         val error = aThrows<StatusRuntimeException> {
             grpcPixClient.salvarNovaChavePix(
                 NovaChavePixRequest.newBuilder()
-                    .setIdCliente(idClienteItau)
+                    .setClienteId(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
                     .setTipoConta(tipoConta)
@@ -156,7 +165,7 @@ class NovaChavePixServiceTest {
 
         with(error) {
             assertEquals(Status.UNAVAILABLE.code, status.code)
-            assertEquals("Serviço externo indisponível", status.description)
+            assertEquals("External Service: unavailable", status.description)
         }
     }
 
@@ -172,7 +181,7 @@ class NovaChavePixServiceTest {
         val error = aThrows<StatusRuntimeException> {
             grpcPixClient.salvarNovaChavePix(
                 NovaChavePixRequest.newBuilder()
-                    .setIdCliente(idClienteItau)
+                    .setClienteId(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
                     .setTipoConta(tipoConta)
@@ -182,7 +191,7 @@ class NovaChavePixServiceTest {
 
         with(error) {
             assertEquals(Status.INVALID_ARGUMENT.code, status.code)
-            assertEquals("novaChavePixValida.novaChavePix: Não é um formado de CPF válido", status.description)
+            assertEquals("salvarNovaChavePix.novaChavePix: Não é um formado de CPF válido", status.description)
         }
     }
 
@@ -192,13 +201,13 @@ class NovaChavePixServiceTest {
         val idClienteItau = "c56dfef4-7901-44fb-84e2-a2cefb157890"
         val cpfCliente = "0246as7781054"
         val tipoConta = TipoContaGrpc.CONTA_CORRENTE
-        val tipoChave = TipoChaveGrpc.CELULAR
+        val tipoChave = TipoChaveGrpc.PHONE
 
 
         val error = aThrows<StatusRuntimeException> {
             grpcPixClient.salvarNovaChavePix(
                 NovaChavePixRequest.newBuilder()
-                    .setIdCliente(idClienteItau)
+                    .setClienteId(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
                     .setTipoConta(tipoConta)
@@ -208,7 +217,7 @@ class NovaChavePixServiceTest {
 
         with(error) {
             assertEquals(Status.INVALID_ARGUMENT.code, status.code)
-            assertEquals("novaChavePixValida.novaChavePix: Não é um formado de CELULAR válido", status.description)
+            assertEquals("salvarNovaChavePix.novaChavePix: Não é um formado de PHONE válido", status.description)
         }
     }
 
@@ -224,7 +233,7 @@ class NovaChavePixServiceTest {
         val error = aThrows<StatusRuntimeException> {
             grpcPixClient.salvarNovaChavePix(
                 NovaChavePixRequest.newBuilder()
-                    .setIdCliente(idClienteItau)
+                    .setClienteId(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
                     .setTipoConta(tipoConta)
@@ -234,7 +243,7 @@ class NovaChavePixServiceTest {
 
         with(error) {
             assertEquals(Status.INVALID_ARGUMENT.code, status.code)
-            assertEquals("novaChavePixValida.novaChavePix: Não é um formado de EMAIL válido", status.description)
+            assertEquals("salvarNovaChavePix.novaChavePix: Não é um formado de EMAIL válido", status.description)
         }
     }
 
@@ -249,7 +258,7 @@ class NovaChavePixServiceTest {
         val error = aThrows<StatusRuntimeException> {
             grpcPixClient.salvarNovaChavePix(
                 NovaChavePixRequest.newBuilder()
-                    .setIdCliente(idClienteItau)
+                    .setClienteId(idClienteItau)
                     .setChave(cpfCliente)
                     .setTipoChave(tipoChave)
                     .setTipoConta(tipoConta)
@@ -259,7 +268,7 @@ class NovaChavePixServiceTest {
 
         with(error) {
             assertEquals(Status.INVALID_ARGUMENT.code, status.code)
-            assertEquals("novaChavePixValida.novaChavePix: Não é um formado de RANDOM válido", status.description)
+            assertEquals("salvarNovaChavePix.novaChavePix: Não é um formado de RANDOM válido", status.description)
         }
     }
 
@@ -272,9 +281,14 @@ class NovaChavePixServiceTest {
     }
 //    }
 
-    @MockBean(ContaClient::class)
-    fun consultaMock(): ContaClient {
-        return Mockito.mock(ContaClient::class.java)
+    @MockBean(ContaItauClient::class)
+    fun consultaMockItau(): ContaItauClient {
+        return Mockito.mock(ContaItauClient::class.java)
+    }
+
+    @MockBean(BacenClient::class)
+    fun consultaMockBacen(): BacenClient {
+        return Mockito.mock(BacenClient::class.java)
     }
 
 }

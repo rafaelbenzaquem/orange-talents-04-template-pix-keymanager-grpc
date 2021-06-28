@@ -1,20 +1,14 @@
 package br.com.zup.academy.benzaquem.pix.grpc
 
-import br.com.zup.academy.benzaquem.pix.chave.ChavePix
+import br.com.zup.academy.benzaquem.pix.chave.NovaChavePix
 import br.com.zup.academy.benzaquem.pix.common.TipoChave
 import br.com.zup.academy.benzaquem.pix.common.TipoConta
-import java.util.*
 
-fun NovaChavePixRequest.toModel(): ChavePix {
-    return ChavePix(
-        id = UUID.randomUUID().toString(),
-        idCliente = idCliente,
+fun NovaChavePixRequest.toModel(): NovaChavePix {
+    return NovaChavePix(
+        clienteId = clienteId,
         chave = chave,
         tipoChave = TipoChave.valueOf(tipoChave.name),
         tipoConta = TipoConta.valueOf(tipoConta.name)
     )
-}
-
-fun ChavePixDeletadaRequest.isInvalida(): Boolean {
-    return chave.isNullOrBlank() || idCliente.isNullOrBlank()
 }

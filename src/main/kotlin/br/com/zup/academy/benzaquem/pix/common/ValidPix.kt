@@ -1,10 +1,11 @@
 package br.com.zup.academy.benzaquem.pix.common
 
-import br.com.zup.academy.benzaquem.pix.chave.ChavePix
+import br.com.zup.academy.benzaquem.pix.chave.NovaChavePix
 import io.micronaut.core.annotation.AnnotationValue
 import io.micronaut.validation.validator.constraints.ConstraintValidator
 import io.micronaut.validation.validator.constraints.ConstraintValidatorContext
 import org.hibernate.validator.internal.constraintvalidators.hv.EmailValidator
+import org.hibernate.validator.internal.constraintvalidators.hv.br.CNPJValidator
 import org.hibernate.validator.internal.constraintvalidators.hv.br.CPFValidator
 import javax.inject.Singleton
 import javax.validation.Constraint
@@ -25,23 +26,27 @@ annotation class ValidPix(
 )
 
 @Singleton
-class ValidPixValidator : ConstraintValidator<ValidPix, ChavePix> {
+class ValidPixValidator : ConstraintValidator<ValidPix, NovaChavePix> {
     override fun isValid(
-        value: ChavePix,
+        value: NovaChavePix,
         annotationMetadata: AnnotationValue<ValidPix>,
         context: ConstraintValidatorContext
     ): Boolean {
 
-        var isValid = valida(value.tipoChave,value.chave)
-        if(!isValid){
-         context.messageTemplate("Não é um formado de ${value.tipoChave} válido")
+        var isValid = valida(value.tipoChave, value.chave)
+        if (!isValid) {
+            context.messageTemplate("Não é um formado de ${value.tipoChave} válido")
         }
         return isValid;
     }
 
     fun valida(tipoChave: TipoChave, chave: String?): Boolean {
         return when (tipoChave) {
-            TipoChave.CPF ->CPFValidator().run {
+            TipoChave.CPF -> CPFValidator().run {
+                initialize(null)
+                isValid(chave, null)
+            }
+            TipoChave.CNPJ -> CNPJValidator().run {
                 initialize(null)
                 isValid(chave, null)
             }
@@ -49,7 +54,7 @@ class ValidPixValidator : ConstraintValidator<ValidPix, ChavePix> {
                 initialize(null)
                 isValid(chave, null)
             }
-            TipoChave.CELULAR -> chave!!
+            TipoChave.PHONE -> chave!!
                 .matches("^\\+[1-9][0-9]\\d{1,14}\$".toRegex())
             TipoChave.RANDOM -> chave.isNullOrBlank()
         }

@@ -1,14 +1,14 @@
-package br.com.zup.academy.benzaquem.pix.external
+package br.com.zup.academy.benzaquem.pix.external.itau
 
 import br.com.zup.academy.benzaquem.pix.common.TipoConta
 
 
-class ConsultaResponse(
-    private val tipo: TipoConta,
-    private val instituicao: InstituicaoResponse? = null,
-    private val agencia: String? = null,
-    private val numero: String? = null,
-    private val titular: TitularResponse
+class ContaItauResponse(
+    val tipo: TipoConta,
+    val instituicao: InstituicaoResponse,
+    val agencia: String,
+    val numero: String,
+    val titular: TitularResponse
 ) {
     override fun toString(): String {
         return "ConsultaResponse(tipo=$tipo, instituicao=$instituicao, agencia='$agencia', numero='$numero', titular=$titular)"
@@ -16,9 +16,9 @@ class ConsultaResponse(
 }
 
 class TitularResponse(
-   private  val id: String,
-   private  val nome: String? = null,
-   private  val cpf: String? = null
+    val id: String,
+    val nome: String,
+    val cpf: String
 ) {
     override fun toString(): String {
         return "TitularResponse(id='$id', nome='$nome', cpf='$cpf')"
@@ -26,8 +26,8 @@ class TitularResponse(
 }
 
 class InstituicaoResponse(
-   private  val nome: String,
-   private  val ispb: String
+    val nome: String,
+    val ispb: String
 ) {
     override fun toString(): String {
         return "InstituicaoResponse(nome='$nome', ispb='$ispb')"

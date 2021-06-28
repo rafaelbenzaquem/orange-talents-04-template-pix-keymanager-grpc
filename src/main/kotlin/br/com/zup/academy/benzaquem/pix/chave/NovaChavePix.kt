@@ -13,32 +13,12 @@ import javax.validation.constraints.NotBlank
 import javax.validation.constraints.Size
 
 
-@Entity
+@ValidPix
 @Introspected
-class ChavePix(
+class NovaChavePix(
     @field:ValidUUID
-    @field:NotBlank @field:Id val id: String,
-    @field:ValidUUID
-    @field:NotBlank val clienteId: String,
-    @field:NotBlank @field:Size(max = 77) val chave: String,
-    @field:NotBlank val ispb: String,
+    @field:NotBlank val clienteId:String,
+    @field:Size(max = 77) val chave: String,
     @field:Enumerated(EnumType.STRING) val tipoChave: TipoChave,
     @field:Enumerated(EnumType.STRING) val tipoConta: TipoConta
-) {
-
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as ChavePix
-
-        if (id != other.id) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        return id.hashCode()
-    }
-}
+) {}

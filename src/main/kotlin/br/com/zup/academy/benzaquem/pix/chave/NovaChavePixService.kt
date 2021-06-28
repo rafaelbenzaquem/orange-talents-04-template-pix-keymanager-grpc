@@ -1,77 +1,48 @@
 package br.com.zup.academy.benzaquem.pix.chave
 
-import br.com.zup.academy.benzaquem.pix.external.ConsultaResponse
-import br.com.zup.academy.benzaquem.pix.external.ContaClient
-import br.com.zup.academy.benzaquem.pix.grpc.ChavePixSalvaResponse
-import br.com.zup.academy.benzaquem.pix.grpc.NovaChavePixRequest
-import br.com.zup.academy.benzaquem.pix.grpc.SalvaNovaChavePixGrpcServiceGrpc
-import br.com.zup.academy.benzaquem.pix.grpc.toModel
-import io.grpc.Status
-import io.grpc.stub.StreamObserver
-import io.micronaut.http.HttpResponse
-import io.micronaut.http.HttpStatus
-import io.micronaut.http.client.exceptions.HttpClientException
-import org.slf4j.LoggerFactory
+import br.com.zup.academy.benzaquem.pix.chave.exceptions.ChavePixExistenteException
+import br.com.zup.academy.benzaquem.pix.external.bacen.BacenClient
+import br.com.zup.academy.benzaquem.pix.external.bacen.CreatePixKeyRequest
+import br.com.zup.academy.benzaquem.pix.external.bacen.criarChavePix
+import br.com.zup.academy.benzaquem.pix.external.itau.ContaItauClient
+import io.micronaut.validation.Validated
+import java.lang.IllegalStateException
 import javax.inject.Singleton
-import javax.validation.ConstraintViolationException
+import javax.transaction.Transactional
+import javax.validation.Valid
 
+@Validated
 @Singleton
 class NovaChavePixService(
-    private val novaChavePixValidador: NovaChavePixValidador,
-    private val contaClient: ContaClient,
-    private val chavePixRepository: ChavePixRepository
-) : SalvaNovaChavePixGrpcServiceGrpc.SalvaNovaChavePixGrpcServiceImplBase() {
+    private val contaItauClient: ContaItauClient,
+    private val chavePixRepository: ChavePixRepository,
+    private val bacenClient: BacenClient
+) {
 
-    private val logger = LoggerFactory.getLogger(this::class.java)
+    @Transactional
+    fun salvarNovaChavePix(@Valid novaChavePix: NovaChavePix): ChavePix {
 
-    override fun salvarNovaChavePix(
-        request: NovaChavePixRequest,
-        responseObserver: StreamObserver<ChavePixSalvaResponse>
-    ){
-        logger.info("iniciando registro $request")
-        try {
-            val novaChavePix = novaChavePixValidador.novaChavePixValida(request.toModel())
-
-
-            if (chavePixRepository.existsByChave(novaChavePix.chave)) {
-                responseObserver.onError(
-                    Status.ALREADY_EXISTS.withDescription("Chave pix já cadastrada")
-                        .asRuntimeException()
-                )
-                return
-            }
-
-            try {
-                val responseConsultaClient: HttpResponse<ConsultaResponse> =
-                    contaClient.consultaContaItau(novaChavePix.idCliente, novaChavePix.tipoConta)
-                logger.info("status client http {}", responseConsultaClient.status)
-                if (responseConsultaClient.status == HttpStatus.NOT_FOUND) {
-                    responseObserver.onError(
-                        Status.NOT_FOUND.withDescription("'${novaChavePix.tipoConta} de cliente id=${novaChavePix.idCliente}' não foi encontrado")
-                            .asRuntimeException()
-                    )
-                    return
-                }
-            } catch (ex: HttpClientException) {
-                responseObserver.onError(
-                    Status.UNAVAILABLE.withDescription("Serviço externo indisponível").asRuntimeException()
-                )
-                return
-            }
-            chavePixRepository.save(novaChavePix)
-
-
-            val responseRegistrarChave = ChavePixSalvaResponse.newBuilder().setPixId(novaChavePix.id).build()
-            responseObserver.onNext(responseRegistrarChave)
-        } catch (ex: ConstraintViolationException) {
-            responseObserver.onError(
-                Status.INVALID_ARGUMENT
-                    .withDescription(ex.message)
-                    .asRuntimeException()
-            )
-            return
+        if (chavePixRepository.existsByChave(novaChavePix.chave)) {
+            throw ChavePixExistenteException("'${novaChavePix.tipoChave} = ${novaChavePix.chave}' já foi cadastrada")
         }
-        responseObserver.onCompleted()
+        val responseItau = contaItauClient.consultaContaItau(novaChavePix.clienteId, novaChavePix.tipoConta)
+
+        val contaItau = if (responseItau.body() == null)
+            throw IllegalStateException(
+                "'${novaChavePix.tipoConta} de cliente id=${novaChavePix.clienteId}' não foi encontrado"
+            )
+        else responseItau.body()
+
+        val responseBacen = bacenClient.cadastrarChavePixBacen(
+            CreatePixKeyRequest(contaItau, novaChavePix)
+        )
+        val chavePixBacen = responseBacen.body()
+
+        val chavePix = chavePixBacen.criarChavePix(novaChavePix.clienteId)
+        chavePixRepository.save(chavePix)
+
+        return chavePix
     }
 
 }
+
